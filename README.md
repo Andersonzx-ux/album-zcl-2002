@@ -1,4 +1,4 @@
-# Álbum Player Interativo - Zezé Di Camargo & Luciano 2003
+# Álbum Player Interativo - Zezé Di Camargo & Luciano 2002
 
 Este projeto é um player/encarte digital premium, desenvolvido com foco na experiência mobile (Safari/iOS) e na reprodução de áudio estática (GitHub Pages).
 
