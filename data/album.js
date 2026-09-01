@@ -9,7 +9,7 @@ window.album = {
     description: "",
     totalDuration: "58:03",
     awards: [
-        { award: "4th Annual Latin Grammy Awards", result: "Indicado", year: "2002", category: "Melhor Álbum de Música Sertaneja", description: "Reconhecimento pela consistência do álbum." },
+        { award: "4th Annual Latin Grammy Awards", result: "Vencedor", year: "2002", category: "Melhor Álbum de Música Sertaneja", description: "Reconhecimento pela consistência do álbum." },
         { award: "Disco de Diamante", result: "Certificado", year: "2003", category: "Vendas", description: "Mais de 1 milhão de cópias vendidas." },
         { award: "Disco de Platina Duplo", result: "Certificado", year: "2002", category: "Vendas", description: "Mais de 500 mil cópias vendidas." },
         { award: "Disco de Platina Triplo", result: "Certificado", year: "2002", category: "Vendas", description: "Mais de 750 mil cópias vendidas." },
