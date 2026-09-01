@@ -86,7 +86,7 @@ window.album = {
         {
             number: 2,
             title: "Aonde Você Foi Parar",
-            duration: "3:49",
+            duration: "3:30",
             composers: ["Maurício Gasperini /Juno / Mauro Gasperini"],
             audio: "audio/02.flac",
             lyrics: `[00:18.87] Eu me lembro tanto de nós dois
@@ -148,7 +148,7 @@ window.album = {
         {
             number: 3,
             title: "Baby Come Back",
-            duration: "3:28",
+            duration: "4:28",
             composers: ["César Augusto / Piska"],
             audio: "audio/03.flac",
             lyrics: `[00:23.13] Eu ando perdido pelas ruas;
@@ -181,7 +181,7 @@ window.album = {
         {
             number: 4,
             title: "Chamando Seu Nome",
-            duration: "3:09",
+            duration: "4:26",
             composers: ["Tivas / Paulinho Levi"],
             audio: "audio/04.flac",
             lyrics: ``
@@ -189,7 +189,7 @@ window.album = {
         {
             number: 5,
             title: "Sou Assim",
-            duration: "3:52",
+            duration: "4:05",
             composers: ["Zezé Di Camargo"],
             audio: "audio/05.flac",
             lyrics: ""
@@ -197,7 +197,7 @@ window.album = {
         {
             number: 6,
             title: "Balançou",
-            duration: "3:33",
+            duration: "3:43",
             composers: ["Antonio Luis / Cecílio Nena"],
             audio: "audio/06.flac",
             lyrics: `[00:35.11] Quero ver o agito da massa
@@ -253,7 +253,7 @@ window.album = {
         {
             number: 7,
             title: "Eu Era Assim",
-            duration: "4:00",
+            duration: "3:45",
             composers: ["César Augusto / Piska"],
             audio: "audio/07.flac",
             lyrics: `[00:24.84] Eu era assim
@@ -282,7 +282,7 @@ window.album = {
         {
             number: 8,
             title: "Imprevisível",
-            duration: "4:11",
+            duration: "3:28",
             composers: ["Zezé Di Camargo"],
             audio: "audio/08.flac",
             lyrics: `[00:09.48] Ah, esse seu jeito de me olhar,
@@ -326,7 +326,7 @@ window.album = {
         {
             number: 9,
             title: "A Ferro e Fogo",
-            duration: "3:44",
+            duration: "3:43",
             composers: ["Vinícius / João Victor / Waléria Leão"],
             audio: "audio/09.flac",
             lyrics: `[00:00.72] A ferro e fogo não dá
@@ -380,7 +380,7 @@ window.album = {
         {
             number: 10,
             title: "Rio e Nova York",
-            duration: "3:57",
+            duration: "3:45",
             composers: ["Carlos Randall / Danimar"],
             audio: "audio/10.flac",
             lyrics: `[00:20.83] Eu sei que a minha estrela vai brilhar
@@ -424,7 +424,7 @@ window.album = {
         {
             number: 11,
             title: "Um Dia Mais",
-            duration: "4:08",
+            duration: "4:07",
             composers: ["César Augusto / Piska"],
             audio: "audio/11.flac",
             lyrics: ``
@@ -432,7 +432,7 @@ window.album = {
         {
             number: 12,
             title: "Só Amor Pra Ela",
-            duration: "3:43",
+            duration: "2:47",
             composers: ["Zezé Di Camargo"],
             audio: "audio/12.flac",
             lyrics: `[00:27.19] Quando chega o dia
@@ -488,7 +488,7 @@ window.album = {
         {
             number: 13,
             title: "Conflito",
-            duration: "3:35",
+            duration: "4:10",
             composers: ["Zezé Di Camargo / Wellington Camargo"],
             audio: "audio/13.flac",
             lyrics: `[00:17.79] Outra vez aqui
@@ -570,7 +570,7 @@ window.album = {
         {
             number: 14,
             title: "Sufocado (Drowning)",
-            duration: "4:06",
+            duration: "4:27",
             composers: ["Linda Thompson / Andreas Carlsson / Rami Yacoub (versão: César Augusto / Bozzo Baretti)"],
             audio: "audio/14.flac",
             lyrics: `[00:19.48] Pra que fingir que sofre (Sofre)
@@ -637,7 +637,7 @@ window.album = {
         {
             number: 15,
             title: "Coração de Vidro",
-            duration: "3:40",
+            duration: "3:15",
             composers: ["Darci Rossi / Alexandre"],
             audio: "audio/15.flac",
             lyrics: `[00:23.94] O coração de quem ama
