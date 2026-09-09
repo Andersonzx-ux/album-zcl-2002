@@ -15,7 +15,7 @@ window.album = {
         { award: "Disco de Platina Triplo", result: "Certificado", year: "2002", category: "Vendas", description: "Mais de 750 mil cópias vendidas." },
     ],
     technicalCredits: {
-        production: ["César Augusto e Nil Bernardes"],
+        production: ["César Augusto"],
         direction: ["Ronaldo Viana"],
         arrangements: ["Grimaldi D. Gomes"],
         recording: ["Mosh Studios (SP)"],
