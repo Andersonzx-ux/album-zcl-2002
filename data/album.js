@@ -148,7 +148,7 @@ window.album = {
         {
             number: 3,
             title: "Baby Come Back",
-            duration: "4:28",
+            duration: "4:23",
             composers: ["César Augusto / Piska"],
             audio: "audio/03.flac",
             lyrics: `[00:23.13] Eu ando perdido pelas ruas;
