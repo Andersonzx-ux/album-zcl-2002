@@ -1,5 +1,5 @@
 :root {
-    /* Paleta Premium — extraída com fidelidade da capa "Zezé Di Camargo & Luciano" (vermelho/preto/dourado) */
+    /* Paleta Premium — identidade visual original, mantida integralmente */
     --c-black-main: #050407;
     --c-black-brown: #251B19;
     --c-brown-dark: #5C3328;
@@ -10,13 +10,13 @@
     --c-light: #F9CD91;
 
     /* Mesmas cores, em RGB, só para permitir opacidade (nenhuma cor nova) */
-    --rgb-black-main: 5, 4, 7;
-    --rgb-black-brown: 37, 27, 25;
-    --rgb-brown-dark: 92, 51, 40;
-    --rgb-sepia-dark: 150, 57, 44;
-    --rgb-gold-main: 192, 133, 81;
-    --rgb-cream: 227, 171, 106;
-    --rgb-light: 249, 205, 145;
+    --rgb-black-main: 4, 3, 3;
+    --rgb-black-brown: 34, 30, 22;
+    --rgb-brown-dark: 66, 59, 44;
+    --rgb-sepia-dark: 97, 89, 70;
+    --rgb-gold-main: 162, 152, 130;
+    --rgb-cream: 193, 187, 169;
+    --rgb-light: 223, 221, 211;
 
     /* Fontes */
     --f-serif: 'Playfair Display', serif;
@@ -105,8 +105,15 @@ body::before {
 }
 
 @keyframes pageIn {
-    from { opacity: 0; transform: translateY(8px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 /* Cabeçalho */
@@ -135,13 +142,11 @@ body::before {
     border-radius: 50%;
     transform: translate(-58%, -50%) rotate(0deg);
     background:
-        repeating-radial-gradient(
-            circle at center,
+        repeating-radial-gradient(circle at center,
             var(--c-black-brown) 0px,
             var(--c-black-brown) 2px,
             var(--c-brown-dark) 3px,
-            var(--c-black-brown) 4px
-        );
+            var(--c-black-brown) 4px);
     box-shadow: 0 10px 25px rgba(var(--rgb-black-main), 0.7);
     z-index: 0;
     transition: transform 0.6s var(--ease-smooth);
@@ -177,7 +182,9 @@ body::before {
 }
 
 @keyframes spinVinyl {
-    to { transform: translate(-58%, -50%) rotate(360deg); }
+    to {
+        transform: translate(-58%, -50%) rotate(360deg);
+    }
 }
 
 .cover-frame {
@@ -273,7 +280,8 @@ body::before {
     transition: background 0.25s var(--ease-smooth), border-color 0.25s var(--ease-smooth), color 0.25s var(--ease-smooth), transform 0.2s var(--ease-smooth);
 }
 
-.secondary-nav button:hover, .secondary-nav button:focus-visible {
+.secondary-nav button:hover,
+.secondary-nav button:focus-visible {
     background: var(--c-black-brown);
     border-color: var(--c-gold-main);
     color: var(--c-gold-main);
@@ -565,7 +573,8 @@ input[type="range"]::-moz-range-thumb:hover {
     border-bottom: none;
 }
 
-.track-item:hover, .track-item:focus-visible {
+.track-item:hover,
+.track-item:focus-visible {
     background: rgba(var(--rgb-light), 0.04);
     padding-left: calc(var(--spacing-md) + 4px);
 }
@@ -619,16 +628,67 @@ input[type="range"]::-moz-range-thumb:hover {
     max-height: 500px;
 }
 
+/* Quando colapsado, a seção encolhe e o header fica limpo */
+.lyrics-section.lyrics-collapsed {
+    height: auto;
+    max-height: none;
+    align-self: start;
+}
+
+.lyrics-section.lyrics-collapsed .lyrics-header {
+    margin-bottom: 0;
+    border-bottom-color: transparent;
+    padding-bottom: 0;
+}
+
 .lyrics-header {
     margin-bottom: var(--spacing-md);
     border-bottom: 1px solid var(--c-brown-dark);
     padding-bottom: var(--spacing-sm);
 }
 
+.lyrics-header-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--spacing-sm);
+}
+
 #lyrics-title {
     color: var(--c-gold-main);
     font-family: var(--f-serif);
     font-style: italic;
+}
+
+/* Botão de toggle da seção de letras */
+.btn-toggle-lyrics {
+    background: rgba(var(--rgb-black-brown), 0.5);
+    border: 1px solid var(--c-sepia-dark);
+    color: var(--c-gold-main);
+    border-radius: 50%;
+    width: 28px;
+    height: 28px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: background 0.25s var(--ease-smooth), border-color 0.25s var(--ease-smooth), transform 0.3s var(--ease-smooth);
+}
+
+.btn-toggle-lyrics:hover {
+    background: var(--c-black-brown);
+    border-color: var(--c-gold-main);
+}
+
+.btn-toggle-lyrics svg {
+    transition: transform 0.35s var(--ease-smooth);
+    display: block;
+}
+
+/* Quando colapsado, a seta aponta para cima */
+.lyrics-collapsed .btn-toggle-lyrics svg {
+    transform: rotate(-180deg);
 }
 
 .lyrics-content {
@@ -639,14 +699,27 @@ input[type="range"]::-moz-range-thumb:hover {
     line-height: 1.85;
     color: var(--c-cream);
     padding-right: var(--spacing-sm);
+    max-height: 9999px;
+    transition: max-height 0.4s var(--ease-smooth), opacity 0.3s ease;
+    opacity: 1;
+}
+
+/* Apenas o corpo da letra colapsa — o header fica intacto */
+.lyrics-section.lyrics-collapsed .lyrics-content {
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
+    padding-right: 0;
 }
 
 .lyrics-content::-webkit-scrollbar {
     width: 6px;
 }
+
 .lyrics-content::-webkit-scrollbar-track {
-    background: rgba(0,0,0,0.2);
+    background: rgba(0, 0, 0, 0.2);
 }
+
 .lyrics-content::-webkit-scrollbar-thumb {
     background: var(--c-sepia-dark);
     border-radius: 3px;
@@ -723,8 +796,15 @@ input[type="range"]::-moz-range-thumb:hover {
 }
 
 @keyframes modalIn {
-    from { opacity: 0; transform: scale(0.97) translateY(6px); }
-    to { opacity: 1; transform: scale(1) translateY(0); }
+    from {
+        opacity: 0;
+        transform: scale(0.97) translateY(6px);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
 }
 
 .modal-content h2 {
@@ -814,8 +894,13 @@ input[type="range"]::-moz-range-thumb:hover {
 }
 
 @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
 }
 
 /* Acessibilidade - Focus Visível */
@@ -826,7 +911,10 @@ input[type="range"]::-moz-range-thumb:hover {
 
 /* Respeita quem prefere menos movimento */
 @media (prefers-reduced-motion: reduce) {
-    *, *::before, *::after {
+
+    *,
+    *::before,
+    *::after {
         animation-duration: 0.01ms !important;
         animation-iteration-count: 1 !important;
         transition-duration: 0.01ms !important;
