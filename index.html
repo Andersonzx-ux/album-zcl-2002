@@ -78,7 +78,14 @@
             <!-- Área de Letras -->
             <section class="lyrics-section" aria-label="Letra da música">
                 <div class="lyrics-header">
-                    <h3 id="lyrics-title">Letra</h3>
+                    <div class="lyrics-header-top">
+                        <h3 id="lyrics-title">Letra</h3>
+                        <button id="btn-toggle-lyrics" class="btn-toggle-lyrics" aria-label="Mostrar/esconder letra" title="Mostrar/esconder letra">
+                            <svg id="lyrics-toggle-icon" viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+                                <path d="M7 10l5 5 5-5z"/>
+                            </svg>
+                        </button>
+                    </div>
                     <p id="lyrics-composers" class="composers"></p>
                 </div>
                 <div id="lyrics-content" class="lyrics-content">
