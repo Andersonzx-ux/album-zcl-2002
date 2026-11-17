@@ -1,61 +1,43 @@
+/* UI do player 2002 — Zezé Di Camargo & Luciano
+   Os fios de cobre da faixa inferior da capa são a barra de progresso: apagados à frente, acesos por onde a faixa já passou.
+   A paleta vem de album.palette (medida na capa) e é aplicada nas variáveis CSS. */
+
+const ICONS = {
+    play: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>',
+    pause: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>',
+    repeat: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/></svg>',
+    repeatOne: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4zm-4-2V9h-1l-2 1v1h1.5v4H13z"/></svg>'
+};
+
+const PALETTE_VARS = {
+    black: '--p-black', wine: '--p-wine', brown: '--p-brown', crimson: '--p-crimson',
+    red: '--p-red', copper: '--p-copper', gold: '--p-gold', cream: '--p-cream'
+};
+// Faixa de fios na capa de 640 px: y 538–582, a barra cobre toda a largura (x 0–640)
+const FIOS = { x0: 8, x1: 632 };
+
 class UI {
     constructor(player, albumData) {
         this.player = player;
         this.albumData = albumData;
-
-        // Caching DOM elements
-        this.elements = {
-            // Header
-            albumArtist: document.getElementById('album-artist'),
-            albumTitle: document.getElementById('album-title'),
-            albumMeta: document.getElementById('album-meta'),
-            albumCover: document.getElementById('album-cover'),
-            ambientBg: document.getElementById('ambient-bg'),
-            vinylDisc: document.getElementById('vinyl-disc'),
-
-            // Buttons Modais
-            btnAbout: document.getElementById('btn-about'),
-            btnAwards: document.getElementById('btn-awards'),
-            btnCredits: document.getElementById('btn-credits'),
-
-            // Modais
-            modalAbout: document.getElementById('modal-about'),
-            modalAwards: document.getElementById('modal-awards'),
-            modalCredits: document.getElementById('modal-credits'),
-
-            // Modais Content
-            aboutContent: document.getElementById('about-content'),
-            awardsContent: document.getElementById('awards-content'),
-            creditsContent: document.getElementById('credits-content'),
-
-            // Player
-            currentTitle: document.getElementById('current-title'),
-            currentComposers: document.getElementById('current-composers'),
-            timeCurrent: document.getElementById('time-current'),
-            timeTotal: document.getElementById('time-total'),
-            progressBar: document.getElementById('progress-bar'),
-            volumeBar: document.getElementById('volume-bar'),
-
-            // Player Controls
-            btnPlayPause: document.getElementById('btn-play-pause'),
-            btnNext: document.getElementById('btn-next'),
-            btnPrev: document.getElementById('btn-prev'),
-            btnShuffle: document.getElementById('btn-shuffle'),
-            btnRepeat: document.getElementById('btn-repeat'),
-
-            // Tracklist & Lyrics
-            tracklist: document.getElementById('tracklist'),
-            lyricsSection: document.querySelector('.lyrics-section'),
-            lyricsTitle: document.getElementById('lyrics-title'),
-            lyricsComposers: document.getElementById('lyrics-composers'),
-            lyricsContent: document.getElementById('lyrics-content'),
-            btnToggleLyrics: document.getElementById('btn-toggle-lyrics')
-        };
-
-        // Estado da letra sincronizada (LRC) da faixa atual
         this.currentLyrics = null;
         this.activeLyricIndex = -1;
+        this.ready = false;
 
+        const $ = (id) => document.getElementById(id);
+        this.elements = {
+            albumMeta: $('album-meta'), tracklist: $('tracklist'),
+            currentKicker: $('current-kicker'), currentTitle: $('current-title'), currentComposers: $('current-composers'),
+            progressBar: $('progress-bar'), timeCurrent: $('time-current'), timeTotal: $('time-total'),
+            btnShuffle: $('btn-shuffle'), btnPrev: $('btn-prev'), btnPlay: $('btn-play-pause'),
+            btnNext: $('btn-next'), btnRepeat: $('btn-repeat'), volumeBar: $('volume-bar'),
+            lyricsSection: $('lyrics-section'), lyricsTitle: $('lyrics-title'), lyricsComposers: $('lyrics-composers'),
+            lyricsContent: $('lyrics-content'), btnToggleLyrics: $('btn-toggle-lyrics'),
+            btnExpandLyrics: $('btn-expand-lyrics'), btnTranslation: $('btn-translation'),
+            btnAbout: $('btn-about'), btnAwards: $('btn-awards'), btnCredits: $('btn-credits'),
+            metaTheme: $('meta-theme-color'),
+            cover: $('cover'), fiosHit: $('fios-hit')
+        };
         this.init();
     }
 
@@ -63,394 +45,469 @@ class UI {
         this.renderAlbumInfo();
         this.renderTracklist();
         this.renderModals();
+        this.applyPalette();
+        this.setupFios();
         this.setupEventListeners();
-        this.updatePlayerControlsState();
+        this.elements.btnPlay.innerHTML = ICONS.play;
+        this.elements.volumeBar.value = this.player.audio.volume;
+        this.updateRangeFill(this.elements.volumeBar, '--volume', this.player.audio.volume * 100);
+        this.updateRepeatButton();
+        this.elements.btnShuffle.classList.toggle('active', this.player.isShuffle);
+        this.setupMediaSession();
+
+        let showTr = true;
+        try { showTr = localStorage.getItem('zcl2002_translation') !== '0'; } catch (e) { /* padrão: ligado */ }
+        this.elements.lyricsSection.classList.toggle('show-tr', showTr);
+        this.elements.btnTranslation.setAttribute('aria-pressed', String(showTr));
+        this.elements.btnTranslation.addEventListener('click', () =>
+            this.setTranslationVisible(!this.elements.lyricsSection.classList.contains('show-tr')));
+        requestAnimationFrame(() => { this.ready = true; });
     }
 
     formatTime(seconds) {
-        if (isNaN(seconds)) return "00:00";
+        if (isNaN(seconds) || !isFinite(seconds)) return '00:00';
         const m = Math.floor(seconds / 60);
         const s = Math.floor(seconds % 60);
-        return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+        return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
     }
 
-    // Converte texto no formato LRC (ex: "[00:12.34]Linha da letra") em uma
-    // lista ordenada de { time (segundos), text }. Linhas de metadado como
-    // [ar:], [ti:], [by:] são ignoradas por não terem o padrão mm:ss.
-    // Retorna null se o texto não contiver nenhuma tag de tempo válida,
-    // permitindo o fallback para letra em texto simples/HTML.
     parseLRC(rawText) {
         if (!rawText) return null;
-
-        const lines = rawText.split(/\r?\n/);
         const timeTag = /\[(\d{1,2}):(\d{2})(?:[.:](\d{1,3}))?\]/g;
         const result = [];
         let hasTimestamps = false;
-
-        lines.forEach(line => {
+        rawText.split(/\r?\n/).forEach(line => {
             const tags = [...line.matchAll(timeTag)];
             if (tags.length === 0) return;
-
             hasTimestamps = true;
             const text = line.replace(timeTag, '').trim();
-
             tags.forEach(tag => {
-                const min = parseInt(tag[1], 10);
-                const sec = parseInt(tag[2], 10);
-                const msRaw = tag[3] ? tag[3].padEnd(3, '0').slice(0, 3) : '0';
-                const ms = parseInt(msRaw, 10);
-                const time = (min * 60) + sec + (ms / 1000);
-                result.push({ time, text });
+                const ms = parseInt((tag[3] || '0').padEnd(3, '0').slice(0, 3), 10);
+                result.push({ time: parseInt(tag[1], 10) * 60 + parseInt(tag[2], 10) + ms / 1000, text });
             });
         });
-
         if (!hasTimestamps) return null;
-
-        result.sort((a, b) => a.time - b.time);
-        return result;
+        return result.sort((a, b) => a.time - b.time);
     }
 
+    updateRangeFill(el, prop, percent) {
+        el.style.setProperty(prop, `${Math.max(0, Math.min(100, percent))}%`);
+    }
+
+    /* ---------- Paleta (medida na capa) e tema Dia/Noite ---------- */
+    applyPalette() {
+        const p = this.albumData.palette;
+        if (!p) return;
+        const root = document.documentElement;
+        Object.entries(PALETTE_VARS).forEach(([key, cssVar]) => { if (p[key]) root.style.setProperty(cssVar, p[key]); });
+    }
+
+    /* ---------- Os fios da capa = barra de progresso ---------- */
+    setupFios() {
+        const { fiosHit } = this.elements;
+        let dragging = false;
+        const seekFromEvent = (e) => {
+            const box = fiosHit.getBoundingClientRect();
+            const pct = Math.max(0, Math.min(1, (e.clientX - box.left) / box.width)) * 100;
+            this.player.seek(pct);
+            this.updateProgressViz(pct);
+        };
+        fiosHit.addEventListener('pointerdown', (e) => {
+            dragging = true; fiosHit.classList.add('dragging');
+            try { fiosHit.setPointerCapture(e.pointerId); } catch (err) { /* ignora */ }
+            seekFromEvent(e);
+        });
+        fiosHit.addEventListener('pointermove', (e) => { if (dragging) seekFromEvent(e); });
+        const stop = () => { dragging = false; fiosHit.classList.remove('dragging'); };
+        fiosHit.addEventListener('pointerup', stop);
+        fiosHit.addEventListener('pointercancel', stop);
+        this.updateProgressViz(0);
+    }
+
+    updateProgressViz(pct) {
+        const p = Math.max(0, Math.min(100, pct)) / 100;
+        const { cover } = this.elements;
+        // --clip: onde a luz termina na faixa (mesma largura da capa); --head: posição da linha-guia
+        cover.style.setProperty('--clip', `${(p * 100).toFixed(3)}%`);
+        cover.classList.toggle('has-progress', p > 0.002);
+    }
+
+    /* ---------- Cabeçalho ---------- */
     renderAlbumInfo() {
         const { elements, albumData } = this;
+        const parts = [`${albumData.tracks.length} faixas`];
+        if (albumData.releaseDate) parts.push(albumData.releaseDate);
+        if (albumData.totalDuration) parts.push(albumData.totalDuration);
+        elements.albumMeta.textContent = parts.join('  ·  ');
 
-        elements.albumTitle.textContent = albumData.title || "Álbum Desconhecido";
-        elements.albumArtist.textContent = albumData.artist || "Artista";
-
-        const coverSrc = albumData.cover || "";
-        elements.albumCover.src = coverSrc;
-        if (coverSrc) {
-            elements.ambientBg.style.backgroundImage = `url('${coverSrc}')`;
-        }
-
-        const metaParts = [];
-        if (albumData.releaseDate) metaParts.push(albumData.releaseDate);
-        if (albumData.genre) metaParts.push(albumData.genre);
-        if (albumData.totalDuration) metaParts.push(albumData.totalDuration);
-
-        elements.albumMeta.textContent = metaParts.join(' • ');
     }
 
-    renderTracklist() {
-        const { elements, albumData } = this;
-        elements.tracklist.innerHTML = "";
+    // "Sem Compositor" (intro) não é um crédito: nesse caso mostra só o artista
+    composersText(track) {
+        const list = (track.composers || []).filter(c => c && !/^sem compositor$/i.test(c.trim()));
+        return list.length ? list.join(' / ') : (this.albumData.artist || '');
+    }
 
-        albumData.tracks.forEach((track, index) => {
+    /* ---------- Faixas ---------- */
+    renderTracklist() {
+        const { tracklist } = this.elements;
+        tracklist.innerHTML = '';
+        this.albumData.tracks.forEach((track, index) => {
             const li = document.createElement('li');
             li.className = 'track-item';
+            li.dataset.index = index;
+            li.tabIndex = 0;
             li.setAttribute('role', 'button');
-            li.setAttribute('tabindex', '0');
-            li.setAttribute('aria-label', `Tocar faixa ${track.number}: ${track.title || 'Sem título'}`);
+            li.setAttribute('aria-label', `Tocar faixa ${track.number}: ${track.title}`);
 
-            // Number
-            const numDiv = document.createElement('div');
-            numDiv.className = 'track-num';
-            numDiv.textContent = track.number.toString().padStart(2, '0');
+            const num = document.createElement('span');
+            num.className = 'track-num';
+            const numText = document.createElement('span');
+            numText.className = 'track-num-text';
+            numText.textContent = String(track.number).padStart(2, '0');
+            const eq = document.createElement('span');
+            eq.className = 'eq'; eq.setAttribute('aria-hidden', 'true');
+            eq.innerHTML = '<i></i><i></i><i></i>';
+            num.append(numText, eq);
 
-            // Details
-            const detailsDiv = document.createElement('div');
-            detailsDiv.className = 'track-details';
+            const details = document.createElement('div');
+            details.className = 'track-details';
+            const title = document.createElement('span');
+            title.className = 'track-title';
+            title.textContent = track.title;
+            const note = document.createElement('span');
+            note.className = 'track-note';
+            note.textContent = (track.composers || []).filter(c => c && !/^sem compositor$/i.test(c.trim())).join(' / ');
+            details.append(title, note);
 
-            const titleSpan = document.createElement('span');
-            titleSpan.className = 'track-title';
-            titleSpan.textContent = track.title || "---";
+            const dur = document.createElement('span');
+            dur.className = 'track-duration';
+            dur.textContent = track.duration || '';
 
-            const composersSpan = document.createElement('span');
-            composersSpan.className = 'composers';
-            composersSpan.textContent = track.composers && track.composers.length > 0
-                ? track.composers.join(' / ')
-                : "Compositor não informado";
-
-            detailsDiv.appendChild(titleSpan);
-            detailsDiv.appendChild(composersSpan);
-
-            // Duration
-            const durationDiv = document.createElement('div');
-            durationDiv.className = 'track-duration';
-            durationDiv.textContent = track.duration || "--:--";
-
-            li.appendChild(numDiv);
-            li.appendChild(detailsDiv);
-            li.appendChild(durationDiv);
-
-            li.addEventListener('click', () => this.player.playTrack(index));
+            li.append(num, details, dur);
+            const play = () => this.player.playTrack(index);
+            li.addEventListener('click', play);
             li.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    this.player.playTrack(index);
-                }
+                if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); play(); }
             });
-
-            elements.tracklist.appendChild(li);
+            tracklist.appendChild(li);
         });
     }
 
+    /* ---------- Modais ---------- */
     renderModals() {
-        // About
-        let aboutHtml = `<p><strong>Lançamento:</strong> ${this.albumData.releaseDate || 'Não informado'}</p>`;
-        aboutHtml += `<p><strong>Gravação:</strong> ${this.albumData.recordingDate || 'Não informado'}</p>`;
-        aboutHtml += `<p><strong>Gravadora(s):</strong> ${this.albumData.labels && this.albumData.labels.length > 0 ? this.albumData.labels.join(', ') : 'Não informado'}</p>`;
-        if (this.albumData.description) {
-            aboutHtml += `<br><p>${this.albumData.description}</p>`;
-        }
-        this.elements.aboutContent.innerHTML = aboutHtml;
+        const { albumData, elements } = this;
+        const about = document.getElementById('about-content');
+        const meta = [];
+        if (albumData.releaseDate) meta.push(`<p><strong>Lançamento:</strong> ${albumData.releaseDate}</p>`);
+        if (albumData.recordingDate) meta.push(`<p><strong>Gravação:</strong> ${albumData.recordingDate}</p>`);
+        if (albumData.genre) meta.push(`<p><strong>Gênero:</strong> ${albumData.genre}</p>`);
+        if (albumData.labels && albumData.labels.length) meta.push(`<p><strong>Gravadora:</strong> ${albumData.labels.join(', ')}</p>`);
+        about.innerHTML = (albumData.description ? `<p>${albumData.description}</p><br>` : '') + meta.join('');
 
-        // Awards
-        if (!this.albumData.awards || this.albumData.awards.length === 0) {
-            this.elements.awardsContent.innerHTML = `<p class="empty-state">Nenhuma premiação cadastrada.</p>`;
-        } else {
-            let awardsHtml = '';
-            this.albumData.awards.forEach(a => {
-                awardsHtml += `
-                    <div class="award-card">
-                        <h3>${a.award || 'Prêmio'} - ${a.result || 'Vencedor'}</h3>
-                        <p class="award-meta">${a.year || ''} • ${a.category || ''}</p>
-                        ${a.description ? `<p>${a.description}</p>` : ''}
-                    </div>
-                `;
-            });
-            this.elements.awardsContent.innerHTML = awardsHtml;
-        }
+        const awards = (albumData.awards || []).filter(a => a && (a.award || a.title));
+        if (awards.length === 0) elements.btnAwards.hidden = true;
+        else document.getElementById('awards-content').innerHTML = awards.map(a => {
+            const head = [a.award || a.title, a.result].filter(Boolean).join(' — ');
+            const sub = [a.year, a.category].filter(Boolean).join(' · ');
+            return `<div class="award-card"><h3>${head}</h3>${sub ? `<p class="award-meta">${sub}</p>` : ''}${a.description ? `<p>${a.description}</p>` : ''}</div>`;
+        }).join('');
 
-        // Credits
-        const tc = this.albumData.technicalCredits;
-        if (!tc || Object.keys(tc).length === 0) {
-            this.elements.creditsContent.innerHTML = `<p class="empty-state">Ficha técnica não disponível.</p>`;
-        } else {
-            let tcHtml = '<div class="credits-grid">';
-            const addCredit = (label, value) => {
-                if (value && ((Array.isArray(value) && value.length > 0) || (typeof value === 'string' && value.trim() !== ''))) {
-                    const displayValue = Array.isArray(value) ? value.join('<br>') : value;
-                    tcHtml += `<div class="credit-item"><h4>${label}</h4><p>${displayValue}</p></div>`;
-                }
-            };
-
-            addCredit('Produção', tc.production);
-            addCredit('Direção', tc.direction);
-            addCredit('Arranjos', tc.arrangements);
-            addCredit('Gravação', tc.recording);
-            addCredit('Mixagem', tc.mixing);
-            addCredit('Masterização', tc.mastering);
-            addCredit('Estúdios', tc.studios);
-            addCredit('Fotografia', tc.photography);
-            addCredit('Projeto Gráfico', tc.artwork);
-            addCredit('Músicos', tc.musicians);
-
-            tcHtml += '</div>';
-            if (tcHtml === '<div class="credits-grid"></div>') {
-                tcHtml = `<p class="empty-state">Ficha técnica não disponível.</p>`;
-            }
-            this.elements.creditsContent.innerHTML = tcHtml;
-        }
+        const tc = albumData.technicalCredits || {};
+        const labels = { production: 'Produção', direction: 'Direção', arrangements: 'Arranjos', recording: 'Gravação',
+            mixing: 'Mixagem', mastering: 'Masterização', studios: 'Estúdios', photography: 'Fotografia', artwork: 'Projeto gráfico', musicians: 'Músicos' };
+        const items = Object.keys(tc).filter(k => {
+            const v = tc[k]; return Array.isArray(v) ? v.length : (v && String(v).trim());
+        });
+        if (items.length === 0) elements.btnCredits.hidden = true;
+        else document.getElementById('credits-content').innerHTML =
+            `<div class="credits-grid">${items.map(k => {
+                const v = Array.isArray(tc[k]) ? tc[k].join('<br>') : tc[k];
+                return `<div class="credit-item"><h4>${labels[k] || k}</h4><p>${v}</p></div>`;
+            }).join('')}</div>`;
     }
 
+    /* As animações (equalizador, respiração dos retratos) só rodam enquanto toca */
+    syncPlaying() {
+        document.documentElement.classList.toggle('is-playing', !!this.player.isPlaying);
+    }
+
+    /* ---------- Tela bloqueada / central de mídia (Media Session) ---------- */
+    setupMediaSession() {
+        if (!('mediaSession' in navigator)) return;
+        const { player } = this;
+        const audio = player.audio;
+        const set = (action, fn) => { try { navigator.mediaSession.setActionHandler(action, fn); } catch (e) { /* não suportado */ } };
+
+        set('play', () => audio.play());
+        set('pause', () => audio.pause());
+        set('previoustrack', () => player.prevTrack());
+        set('nexttrack', () => player.nextTrack());
+        set('seekto', (d) => {
+            if (d.fastSeek && 'fastSeek' in audio) audio.fastSeek(d.seekTime); else audio.currentTime = d.seekTime;
+            this.updatePositionState();
+        });
+        // Sem seekbackward/seekforward, o iOS mostra os botões de faixa em vez de ±10 s
+        set('seekbackward', null);
+        set('seekforward', null);
+        set('stop', () => { audio.pause(); audio.currentTime = 0; });
+    }
+
+    updateMediaMetadata(track) {
+        if (!('mediaSession' in navigator) || typeof MediaMetadata === 'undefined') return;
+        const abs = (path) => new URL(path, document.baseURI).href;
+        const album = this.albumData.title || '';
+        navigator.mediaSession.metadata = new MediaMetadata({
+            title: track.title,
+            artist: this.albumData.artist || '',
+            album,
+            artwork: [
+                { src: abs('assets/cover-512.jpg'), sizes: '512x512', type: 'image/jpeg' },
+                { src: abs('assets/cover-256.jpg'), sizes: '256x256', type: 'image/jpeg' }
+            ]
+        });
+    }
+
+    updatePositionState() {
+        if (!('mediaSession' in navigator) || !navigator.mediaSession.setPositionState) return;
+        const a = this.player.audio;
+        if (!isFinite(a.duration) || a.duration <= 0) return;
+        try {
+            navigator.mediaSession.setPositionState({
+                duration: a.duration, playbackRate: a.playbackRate || 1, position: Math.min(a.currentTime, a.duration)
+            });
+        } catch (e) { /* valores inválidos momentâneos */ }
+    }
+
+    /* ---------- Eventos ---------- */
     setupEventListeners() {
         const { elements, player } = this;
-
-        // Player Controls
-        elements.btnPlayPause.addEventListener('click', () => player.togglePlay());
+        elements.btnPlay.addEventListener('click', () => player.togglePlay());
         elements.btnNext.addEventListener('click', () => player.nextTrack());
         elements.btnPrev.addEventListener('click', () => player.prevTrack());
-
         elements.btnShuffle.addEventListener('click', () => {
-            const isShuffle = player.toggleShuffle();
-            elements.btnShuffle.classList.toggle('active', isShuffle);
-
-
+            elements.btnShuffle.classList.toggle('active', player.toggleShuffle());
         });
+        elements.btnRepeat.addEventListener('click', () => { player.toggleRepeat(); this.updateRepeatButton(); });
 
-        elements.btnRepeat.addEventListener('click', () => {
-            const mode = player.toggleRepeat();
-            if (mode === 0) {
-                elements.btnRepeat.classList.remove('active');
-                elements.btnRepeat.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/></svg>';
-            } else if (mode === 1) {
-                elements.btnRepeat.classList.add('active');
-                elements.btnRepeat.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/></svg>';
-            } else {
-                elements.btnRepeat.classList.add('active');
-                elements.btnRepeat.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4zm-4-2V9h-1l-2 1v1h1.5v4H13z"/></svg>';
-            }
-        });
-
-        // Progress & Volume
         elements.progressBar.addEventListener('input', (e) => {
-            player.seek(e.target.value);
+            const v = parseFloat(e.target.value);
+            player.seek(v);
+            this.updateRangeFill(elements.progressBar, '--progress', v);
+            this.updateProgressViz(v);
         });
-
         elements.volumeBar.addEventListener('input', (e) => {
-            player.setVolume(e.target.value);
-            elements.volumeBar.style.setProperty('--volume', `${e.target.value * 100}%`);
-        });
-        elements.volumeBar.value = player.audio.volume;
-        elements.volumeBar.style.setProperty('--volume', `${player.audio.volume * 100}%`);
-
-        // Modais events
-        const openModal = (modal) => {
-            modal.showModal();
-        };
-        const closeModals = () => {
-            [elements.modalAbout, elements.modalAwards, elements.modalCredits].forEach(m => {
-                if (m.open) m.close();
-            });
-        };
-
-        elements.btnAbout.addEventListener('click', () => openModal(elements.modalAbout));
-        elements.btnAwards.addEventListener('click', () => openModal(elements.modalAwards));
-        elements.btnCredits.addEventListener('click', () => openModal(elements.modalCredits));
-
-        document.querySelectorAll('.close-modal').forEach(btn => {
-            btn.addEventListener('click', closeModals);
+            const v = parseFloat(e.target.value);
+            player.setVolume(v);
+            this.updateRangeFill(elements.volumeBar, '--volume', v * 100);
         });
 
-        // Close modal clicking outside
-        document.querySelectorAll('dialog').forEach(dialog => {
-            dialog.addEventListener('click', (e) => {
-                const rect = dialog.getBoundingClientRect();
-                const isInDialog = (rect.top <= e.clientY && e.clientY <= rect.top + rect.height &&
-                    rect.left <= e.clientX && e.clientX <= rect.left + rect.width);
-                if (!isInDialog) {
-                    dialog.close();
-                }
-            });
-        });
-
-        // Toggle da seção de letras
         elements.btnToggleLyrics.addEventListener('click', () => {
-            const isCollapsed = elements.lyricsSection.classList.toggle('lyrics-collapsed');
-            elements.btnToggleLyrics.setAttribute('aria-expanded', String(!isCollapsed));
+            const collapsed = elements.lyricsSection.classList.toggle('lyrics-collapsed');
+            elements.btnToggleLyrics.setAttribute('aria-expanded', String(!collapsed));
+            elements.btnToggleLyrics.setAttribute('aria-label', collapsed ? 'Mostrar letra' : 'Esconder letra');
         });
-        // Estado inicial: expandido
-        elements.btnToggleLyrics.setAttribute('aria-expanded', 'true');
+
+        const setFocus = (on) => {
+            elements.lyricsSection.classList.toggle('lyrics-focus', on);
+            document.body.classList.toggle('lyrics-open', on);
+            elements.btnExpandLyrics.setAttribute('aria-pressed', String(on));
+            elements.btnExpandLyrics.setAttribute('aria-label', on ? 'Sair da tela cheia' : 'Letra em tela cheia');
+            if (on) {
+                elements.lyricsSection.classList.remove('lyrics-collapsed');
+                elements.btnToggleLyrics.setAttribute('aria-expanded', 'true');
+            }
+            this.activeLyricIndex = -2;
+            this.updateActiveLyric(player.audio.currentTime);
+        };
+        elements.btnExpandLyrics.addEventListener('click', () => setFocus(!elements.lyricsSection.classList.contains('lyrics-focus')));
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && elements.lyricsSection.classList.contains('lyrics-focus')) setFocus(false);
+        });
+
+        [['btn-about', 'modal-about'], ['btn-awards', 'modal-awards'], ['btn-credits', 'modal-credits']].forEach(([b, m]) => {
+            const modal = document.getElementById(m);
+            document.getElementById(b).addEventListener('click', () => modal.showModal());
+            modal.addEventListener('click', (e) => { if (e.target === modal) modal.close(); });
+            modal.querySelector('.close-modal').addEventListener('click', () => modal.close());
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.target.closest && e.target.closest('input, textarea, dialog')) return;
+            if (e.code === 'Space') { e.preventDefault(); player.togglePlay(); }
+            else if (e.code === 'ArrowRight' && e.shiftKey) player.nextTrack();
+            else if (e.code === 'ArrowLeft' && e.shiftKey) player.prevTrack();
+        });
+    }
+
+    updateRepeatButton() {
+        const { btnRepeat } = this.elements;
+        const mode = this.player.repeatMode;
+        btnRepeat.innerHTML = mode === 2 ? ICONS.repeatOne : ICONS.repeat;
+        btnRepeat.classList.toggle('active', mode !== 0);
+        btnRepeat.setAttribute('aria-label', ['Repetir: desligado', 'Repetir: álbum', 'Repetir: faixa'][mode]);
     }
 
     updatePlayerControlsState() {
-        const { elements, player } = this;
-        const playIcon = '<svg viewBox="0 0 24 24" fill="currentColor" width="48" height="48"><path d="M8 5v14l11-7z"/></svg>';
-        const pauseIcon = '<svg viewBox="0 0 24 24" fill="currentColor" width="48" height="48"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';
-
-        elements.btnPlayPause.innerHTML = player.isPlaying ? pauseIcon : playIcon;
-        elements.btnPlayPause.setAttribute('aria-label', player.isPlaying ? 'Pausar' : 'Play');
-        elements.vinylDisc.classList.toggle('is-spinning', player.isPlaying);
-        elements.btnShuffle.classList.toggle('active', player.isShuffle);
-
-        if (player.repeatMode === 0) {
-            elements.btnRepeat.classList.remove('active');
-            elements.btnRepeat.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/></svg>';
-        } else if (player.repeatMode === 1) {
-            elements.btnRepeat.classList.add('active');
-            elements.btnRepeat.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/></svg>';
-        } else {
-            elements.btnRepeat.classList.add('active');
-            elements.btnRepeat.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4zm-4-2V9h-1l-2 1v1h1.5v4H13z"/></svg>';
-        }
+        this.elements.btnPlay.innerHTML = this.player.isPlaying ? ICONS.pause : ICONS.play;
+        this.elements.btnPlay.setAttribute('aria-label', this.player.isPlaying ? 'Pausar' : 'Tocar');
     }
 
+    /* ---------- Faixa atual ---------- */
     onTrackChange(index) {
-        const { elements, player, albumData } = this;
-        const track = player.getCurrentTrack();
-
+        const { elements } = this;
+        const track = this.albumData.tracks[index];
         if (!track) return;
+        const total = this.albumData.tracks.length;
+        const pad = (n) => String(n).padStart(2, '0');
 
-        // Update tracklist highlights
-        const items = elements.tracklist.querySelectorAll('li');
-        items.forEach((item, i) => {
-            item.classList.toggle('active', i === index);
+        elements.currentKicker.textContent = `Faixa ${pad(track.number)} / ${pad(total)}`;
+        elements.currentTitle.textContent = track.title;
+        const comp = this.composersText(track);
+        elements.currentComposers.textContent = comp;
+        elements.lyricsTitle.textContent = track.title;
+        elements.lyricsComposers.textContent = comp;
+        elements.timeTotal.textContent = track.duration ? track.duration.padStart(5, '0') : '00:00';
+        elements.timeCurrent.textContent = '00:00';
+        elements.progressBar.value = 0;
+        this.updateRangeFill(elements.progressBar, '--progress', 0);
+        this.updateProgressViz(0);
+
+        elements.tracklist.querySelectorAll('.track-item').forEach((li) => {
+            const active = Number(li.dataset.index) === index;
+            li.classList.toggle('active', active);
+            if (active) li.setAttribute('aria-current', 'true'); else li.removeAttribute('aria-current');
         });
 
-        // Update Player Info
-        elements.currentTitle.textContent = `${track.number}. ${track.title || 'Faixa ' + track.number}`;
-        elements.currentComposers.textContent = track.composers && track.composers.length > 0
-            ? track.composers.join(' / ')
-            : "Compositor não informado";
-
-        // Update Lyrics
-        elements.lyricsTitle.textContent = track.title || 'Faixa ' + track.number;
-        elements.lyricsComposers.textContent = elements.currentComposers.textContent;
-
+        this.updateMediaMetadata(track);
         this.renderLyrics(track);
-
-        // Reset progress visually
-        elements.progressBar.value = 0;
-        elements.progressBar.style.setProperty('--progress', '0%');
-        elements.timeCurrent.textContent = "00:00";
+        this.updatePlayerControlsState();
     }
 
-    // Renderiza a letra da faixa. Se o texto estiver no formato LRC
-    // (com tags [mm:ss.xx]), monta uma linha por <p> sincronizável.
-    // Caso contrário, cai no modo antigo (texto/HTML estático).
-    renderLyrics(track) {
-        const { elements } = this;
+    pairTranslation(originalLines, translationRaw) {
+        const out = new Array(originalLines.length).fill('');
+        const tr = (translationRaw || '').trim();
+        if (!tr) return out;
+        const trParsed = this.parseLRC(tr);
+        if (trParsed && originalLines[0] && originalLines[0].time !== undefined) {
+            originalLines.forEach((line, i) => {
+                let best = null, bestDiff = 0.8;
+                trParsed.forEach(t => {
+                    const d = Math.abs(t.time - line.time);
+                    if (d <= bestDiff) { best = t; bestDiff = d; }
+                });
+                if (best) out[i] = best.text;
+            });
+            return out;
+        }
+        const plain = tr.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+        let k = 0;
+        originalLines.forEach((line, i) => { if (line.text && line.text.trim() && k < plain.length) out[i] = plain[k++]; });
+        return out;
+    }
 
+    renderLyrics(track) {
+        const { lyricsContent, btnTranslation } = this.elements;
         this.currentLyrics = null;
         this.activeLyricIndex = -1;
+        const raw = (track.lyrics || '').trim();
+        const hasTr = !!(track.translation || '').trim();
+        const ok = !!(raw && hasTr);
+        btnTranslation.classList.toggle('no-tr', !ok);
+        btnTranslation.title = ok ? 'Tradução' : 'Esta faixa ainda não tem tradução';
 
-        if (!track.lyrics) {
-            elements.lyricsContent.classList.remove('lyrics-synced');
-            elements.lyricsContent.innerHTML = `<p class="empty-state">Letra ainda não cadastrada.</p>`;
+        const addLine = (container, text, tr, i) => {
+            const p = document.createElement('p');
+            p.className = 'lyrics-line';
+            if (i !== null) p.dataset.index = i;
+            const main = document.createElement('span');
+            main.className = 'lyrics-main';
+            main.textContent = text || ' ';
+            p.appendChild(main);
+            if (tr) {
+                const t = document.createElement('span');
+                t.className = 'lyrics-tr';
+                t.textContent = tr;
+                p.appendChild(t);
+            }
+            container.appendChild(p);
+        };
+
+        if (!raw) {
+            lyricsContent.classList.remove('lyrics-synced', 'lyrics-plain');
+            lyricsContent.innerHTML = '<p class="empty-state">Letra ainda não adicionada para esta faixa.</p>';
             return;
         }
-
-        const parsed = this.parseLRC(track.lyrics);
-
-        if (parsed && parsed.length > 0) {
+        const parsed = this.parseLRC(raw);
+        lyricsContent.innerHTML = '';
+        if (parsed && parsed.length) {
             this.currentLyrics = parsed;
-            elements.lyricsContent.classList.add('lyrics-synced');
-            elements.lyricsContent.innerHTML = '';
-
-            parsed.forEach((line, i) => {
-                const p = document.createElement('p');
-                p.className = 'lyrics-line';
-                p.dataset.index = i;
-                p.textContent = line.text || '\u00A0';
-                elements.lyricsContent.appendChild(p);
-            });
+            lyricsContent.classList.add('lyrics-synced');
+            lyricsContent.classList.remove('lyrics-plain');
+            const trs = this.pairTranslation(parsed, track.translation);
+            parsed.forEach((line, i) => addLine(lyricsContent, line.text, trs[i], i));
         } else {
-            elements.lyricsContent.classList.remove('lyrics-synced');
-            elements.lyricsContent.innerHTML = track.lyrics;
+            lyricsContent.classList.remove('lyrics-synced');
+            lyricsContent.classList.add('lyrics-plain');
+            const lines = raw.split(/\r?\n/).map(t => ({ text: t.trim() }));
+            const trs = this.pairTranslation(lines, track.translation);
+            lines.forEach((line, i) => addLine(lyricsContent, line.text, trs[i], null));
         }
-
-        elements.lyricsContent.scrollTop = 0;
+        lyricsContent.scrollTop = 0;
     }
 
-    // Chamado a cada timeupdate do áudio. Descobre qual linha da letra
-    // corresponde ao tempo atual, destaca ela e rola a view suavemente.
+    setTranslationVisible(on) {
+        this.elements.lyricsSection.classList.toggle('show-tr', on);
+        this.elements.btnTranslation.setAttribute('aria-pressed', String(on));
+        try { localStorage.setItem('zcl2002_translation', on ? '1' : '0'); } catch (e) { /* ignora */ }
+        this.activeLyricIndex = -2;
+        this.updateActiveLyric(this.player.audio.currentTime);
+    }
+
     updateActiveLyric(currentTime) {
         if (!this.currentLyrics) return;
-
-        const lines = this.currentLyrics;
         let idx = -1;
-        for (let i = 0; i < lines.length; i++) {
-            if (currentTime >= lines[i].time) {
-                idx = i;
-            } else {
-                break;
-            }
+        for (let i = 0; i < this.currentLyrics.length; i++) {
+            if (currentTime >= this.currentLyrics[i].time) idx = i; else break;
         }
-
         if (idx === this.activeLyricIndex) return;
         this.activeLyricIndex = idx;
 
-        const items = this.elements.lyricsContent.querySelectorAll('.lyrics-line');
+        const container = this.elements.lyricsContent;
+        const items = container.querySelectorAll('.lyrics-line');
         items.forEach((el, i) => el.classList.toggle('active', i === idx));
 
+        // Rola só o quadro da letra (nunca a página) e só se ele estiver aberto
         if (idx >= 0 && items[idx] && !this.elements.lyricsSection.classList.contains('lyrics-collapsed')) {
-            items[idx].scrollIntoView({ behavior: 'smooth', block: 'center' });
+            const el = items[idx];
+            const top = el.offsetTop - container.clientHeight / 2 + el.clientHeight / 2;
+            container.scrollTo({ top, behavior: 'smooth' });
         }
     }
 
     onProgressUpdate(currentTime, duration) {
         const { elements } = this;
-        if (!isNaN(duration) && duration > 0) {
-            const percent = (currentTime / duration) * 100;
-            elements.progressBar.value = percent;
-            elements.progressBar.style.setProperty('--progress', `${percent}%`);
-            elements.timeTotal.textContent = this.formatTime(duration);
-        }
         elements.timeCurrent.textContent = this.formatTime(currentTime);
+        if (isFinite(duration) && duration > 0) {
+            elements.timeTotal.textContent = this.formatTime(duration);
+            const pct = (currentTime / duration) * 100;
+            if (document.activeElement !== elements.progressBar) elements.progressBar.value = pct;
+            this.updateRangeFill(elements.progressBar, '--progress', pct);
+            this.updateProgressViz(pct);
+        }
         this.updateActiveLyric(currentTime);
+        const now = Date.now();
+        if (now - (this.lastPosSync || 0) > 1000) { this.lastPosSync = now; this.updatePositionState(); }
     }
 
     onStateChange() {
+        if ('mediaSession' in navigator) {
+            navigator.mediaSession.playbackState = this.player.isPlaying ? 'playing' : 'paused';
+            this.updatePositionState();
+        }
         this.updatePlayerControlsState();
+        // pequeno atraso: trocar de faixa pausa e retoma o áudio e não deve piscar as animações
+        clearTimeout(this.playTimer);
+        this.playTimer = setTimeout(() => this.syncPlaying(), 220);
     }
 }
